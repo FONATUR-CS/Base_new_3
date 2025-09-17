@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geoportal de Turismo Comunitario - México</title>
+
+  <!-- Mapbox GL JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+
+  <!-- Framework Gobierno Mexicano -->
+  <link href="https://framework-gb.cdn.gob.mx/gm/v3/assets/styles/main.css" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Anime.js para animaciones -->
+  <script src="https://unpkg.com/animejs@3.2.1/lib/anime.min.js"></script>
+
+  <!-- Estilos personalizados unificados -->
+  <style>
+    /* Reset y variables principales */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #2E8B57;
+      --accent: #EA5188;
+      --light-bg: #fafafa;
+      --nav-h: 56px;
+      --footer-h: clamp(56px, 8vw, 90px);
+      font-size: 16px;
+    }
+
+    @media (max-width: 768px) {
+      :root { font-size: 14px; }
+    }
+
+    body {
+      font-family: 'Noto Sans', sans-serif;
+      background-color: var(--light-bg);
+      color: #333;
+      line-height: 1.6;
+    }
+
+    /* Video de introducción */
+    #intro-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 10000;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.5s ease;
+    }
+
+    #intro-video video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #intro-skip {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-family: 'Noto Sans', sans-serif;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    #intro-skip:hover {
+      background: rgba(255,255,255,1);
+      transform: scale(1.05);
+    }
+
+    /* Navegación principal */
+    #main-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      background: #fff;
+      z-index: 1000;
+      padding: 10px 24px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      height: var(--nav-h);
+    }
+
+    #main-nav .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      height: 100%;
+    }
+
+    #main-nav .logo {
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 1.2rem;
+    }
+
+    #main-nav .nav-menu {
+      display: flex;
+      list-style: none;
+      gap: 2rem;
+    }
+
+    #main-nav .nav-menu a {
+      text-decoration: none;
+      color: #555;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+
+    #main-nav .nav-menu a:hover {
+      color: var(--primary);
+    }
+
+    /* Hamburger menu para móvil */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      cursor: pointer;
+    }
+
+    .hamburger span {
+      width: 25px;
+      height: 3px;
+      background: var(--primary);
+      margin: 3px 0;
+      transition: 0.3s;
+    }
+
+    @media (max-width: 768px) {
+      .hamburger { display: flex; }
+      #main-nav .nav-menu {
+        position: fixed;
+        top: var(--nav-h);
+        left: -100%;
+        width: 100%;
+        height: calc(100vh - var(--nav-h));
+        background: #fff;
+        flex-direction: column;
+        justify-content: start;
+        align-items: center;
+        padding-top: 2rem;
+        transition: left 0.3s ease;
+      }
+
+      #main-nav .nav-menu.active { left: 0; }
+    }
+
+    /* Layout principal */
+    .main-container {
+      margin-top: var(--nav-h);
+      display: flex;
+      height: calc(100vh - var(--nav-h));
+    }
+
+    /* Panel lateral izquierdo */
+    .sidebar {
+      width: 400px;
+      background: #fff;
+      overflow-y: auto;
+      padding: 2rem;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+
+    .sidebar h1 {
+      color: var(--primary);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+
+    .sidebar .subtitle {
+      color: #666;
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+
+    /* Filtros */
+    .filters {
+      margin-bottom: 2rem;
+    }
+
+    .filter-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .filter-group select,
+    .filter-group input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-family: 'Noto Sans', sans-serif;
+      transition: border-color 0.3s ease;
+    }
+
+    .filter-group select:focus,
+    .filter-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* Info section */
+    .info-section {
+      background: #f8f9fa;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+
+    .info-section h3 {
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+
+    .info-section ul {
+      list-style-type: none;
+    }
+
+    .info-section li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .info-section li:last-child {
+      border-bottom: none;
+    }
+
+    .info-section li::before {
+      content: "✓";
+      color: var(--primary);
+      font-weight: bold;
+      margin-right: 0.5rem;
+    }
+
+    /* Contenedor del mapa */
+    .map-container {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Panel de información lateral (story-side) */
+    .story-side {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 350px;
+      max-height: calc(100vh - 140px);
+      background: rgba(255,255,255,0.95);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      transform: translateX(400px);
+      transition: transform 0.3s ease;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      overflow-y: auto;
+    }
+
+    .story-side.active {
+      transform: translateX(0);
+    }
+
+    .story-side h3 {
+      color: var(--primary);
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+
+    .story-side .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .story-side .close-btn:hover {
+      color: #333;
+    }
+
+    /* Modal "Ver más" */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.8);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: #fff;
+      width: 90%;
+      max-width: 900px;
+      max-height: 90vh;
+      border-radius: 16px;
+      padding: 2rem;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .modal-content .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: none;
+      border: none;
+      font-size: 2rem;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .modal-content .modal-close:hover {
+      color: #333;
+    }
+
+    .modal-content h2 {
+      color: var(--primary);
+      margin-bottom: 1rem;
+      font-size: 2rem;
+      padding-right: 3rem;
+    }
+
+    .modal-content .modal-map {
+      width: 100%;
+      height: 300px;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    .modal-info {
+      margin: 1rem 0;
+    }
+
+    .modal-info h4 {
+      color: var(--primary);
+      margin: 1rem 0 0.5rem 0;
+    }
+
+    .modal-info ul {
+      margin-left: 1rem;
+    }
+
+    .modal-info li {
+      margin-bottom: 0.5rem;
+    }
+
+    /* Botones */
+    .btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Noto Sans', sans-serif;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: inline-block;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: #236A47;
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: var(--accent);
+    }
+
+    .btn-secondary:hover {
+      background: #D63F7A;
+    }
+
+    /* Marcadores personalizados */
+    .marker-custom {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .marker-custom:hover {
+      transform: scale(1.1);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        max-height: 40vh;
+        padding: 1rem;
+      }
+
+      .sidebar h1 {
+        font-size: 1.5rem;
+      }
+
+      .map-container {
+        height: 60vh;
+      }
+
+      .story-side {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        max-height: 70vh;
+        border-radius: 16px 16px 0 0;
+        transform: translateY(100%);
+      }
+
+      .story-side.active {
+        transform: translateY(0);
+      }
+
+      .modal-content {
+        width: 95%;
+        max-height: 95vh;
+        padding: 1.5rem;
+      }
+
+      .modal-content h2 {
+        font-size: 1.5rem;
+      }
+    }
+
+    /* Animaciones con pulse para marcadores activos */
+    .marker-pulse {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.15); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Loading spinner */
+    .loading {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 5000;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Popup de Mapbox personalizado */
+    .mapboxgl-popup-content {
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Noto Sans', sans-serif;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .mapboxgl-popup-content h3 {
+      margin: 0 0 10px 0;
+      color: var(--primary);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Video de introducción -->
+  <div id="intro-video">
+    <video autoplay muted>
+      <source src="introd.mp4" type="video/mp4">
+      <p>Su navegador no soporta video HTML5.</p>
+    </video>
+    <button id="intro-skip">Saltar</button>
+  </div>
+
+  <!-- Navegación principal -->
+  <nav id="main-nav">
+    <div class="nav-container">
+      <div class="logo">Turismo Comunitario México</div>
+      <ul class="nav-menu">
+        <li><a href="#inicio">Inicio</a></li>
+        <li><a href="#experiencias">Experiencias</a></li>
+        <li><a href="#comunidades">Comunidades</a></li>
+        <li><a href="#acerca">Acerca de</a></li>
+      </ul>
+      <div class="hamburger" id="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Contenedor principal -->
+  <div class="main-container">
+
+    <!-- Panel lateral izquierdo -->
+    <aside class="sidebar">
+      <h1>Descubre México</h1>
+      <p class="subtitle">Vive experiencias auténticas de turismo comunitario que transforman viajes en conexiones humanas.</p>
+
+      <!-- Filtros -->
+      <div class="filters">
+        <div class="filter-group">
+          <label for="estado-filter">Estado</label>
+          <select id="estado-filter">
+            <option value="">Todos los estados</option>
+            <option value="baja-california-sur">Baja California Sur</option>
+            <option value="oaxaca">Oaxaca</option>
+            <option value="chiapas">Chiapas</option>
+            <option value="yucatan">Yucatán</option>
+            <option value="veracruz">Veracruz</option>
+            <option value="quintana-roo">Quintana Roo</option>
+            <option value="michoacan">Michoacán</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="tipo-filter">Tipo de experiencia</label>
+          <select id="tipo-filter">
+            <option value="">Todas las experiencias</option>
+            <option value="aventura">Aventura</option>
+            <option value="cultura">Cultura</option>
+            <option value="gastronomia">Gastronomía</option>
+            <option value="naturaleza">Naturaleza</option>
+            <option value="artesanias">Artesanías</option>
+            <option value="ecoturismo">Ecoturismo</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="search-input">Buscar experiencia</label>
+          <input type="text" id="search-input" placeholder="Escribe aquí...">
+        </div>
+
+        <button class="btn" onclick="aplicarFiltros()">Aplicar filtros</button>
+      </div>
+
+      <!-- Información adicional -->
+      <div class="info-section">
+        <h3>¿Por qué elegir turismo comunitario?</h3>
+        <ul>
+          <li>Experiencias auténticas</li>
+          <li>Apoyas la economía local</li>
+          <li>Preservas el medio ambiente</li>
+          <li>Conectas con la cultura real</li>
+          <li>Contribuyes al desarrollo sostenible</li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Contenedor del mapa -->
+    <main class="map-container">
+      <div id="map"></div>
+
+      <!-- Panel lateral de información -->
+      <div class="story-side" id="story-side">
+        <button class="close-btn" onclick="cerrarInfoPanel()">&times;</button>
+        <h3 id="info-title">Selecciona un punto</h3>
+        <p id="info-description">Haz clic en los marcadores del mapa para descubrir experiencias únicas de turismo comunitario.</p>
+        <div id="info-content"></div>
+        <button class="btn" id="ver-mas-btn" onclick="abrirModal()" style="display:none;">Ver más</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal "Ver más" -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close" onclick="cerrarModal()">&times;</button>
+      <h2 id="modal-title">Título de la experiencia</h2>
+      <div id="modal-body">
+        <!-- Contenido dinámico -->
+      </div>
+      <div id="modal-map" class="modal-map"></div>
+    </div>
+  </div>
+
+  <!-- Loading spinner -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- JavaScript principal -->
+  <script>
+    // Variables globales
+    let map, modalMap;
+    let currentMarker = null;
+    let activeExperience = null;
+    let allMarkers = [];
+
+    // Token de Mapbox encontrado en los archivos
+    mapboxgl.accessToken = 'pk.eyJ1IjoiY2hheXZvbHRhIiwiYSI6ImNsdGRlNml1NDAyaXgyanJ3eXYzdGQ0MmEifQ.VH5UyDCjvPQ1X_KrkkHcZQ';
+
+    // Datos de experiencias de turismo comunitario
+    const experienciasData = [
+      {
+        id: 1,
+        nombre: 'Avistamiento de ballenas - La Paz',
+        estado: 'baja-california-sur',
+        tipo: 'naturaleza',
+        lat: 24.1426,
+        lng: -110.3128,
+        descripcion: 'Observa ballenas grises en su hábitat natural con pescadores locales de La Paz.',
+        descripcionCompleta: 'Una experiencia única donde los pescadores artesanales de La Paz te llevan a avistar ballenas grises, jorobadas y azules en las aguas del Mar de Cortés. La temporada de avistamiento va de diciembre a abril. Incluye comida tradicional preparada por las familias de la cooperativa pesquera.',
+        precio: '$1,200 MXN',
+        duracion: '6 horas',
+        incluye: ['Transporte marítimo', 'Guía especializado', 'Comida tradicional', 'Equipo de seguridad', 'Certificado de avistamiento'],
+        comunidad: 'Cooperativa de Pescadores Artesanales La Paz',
+        telefono: '+52 612 123 4567',
+        email: 'ballenas@lapazturismo.com'
+      },
+      {
+        id: 2,
+        nombre: 'Taller de textiles zapotecos - Teotitlán',
+        estado: 'oaxaca',
+        tipo: 'artesanias',
+        lat: 17.0266,
+        lng: -96.5450,
+        descripcion: 'Aprende técnicas ancestrales de tejido con maestras artesanas zapotecas.',
+        descripcionCompleta: 'Sumérgete en la tradición textil zapoteca de más de 500 años. Aprenderás a usar tintes naturales extraídos de cochinilla, añil y plantas locales, así como el manejo del telar de cintura. Crearás tu propia pieza textil bajo la guía de maestras artesanas reconocidas internacionalmente.',
+        precio: '$800 MXN',
+        duracion: '4 horas',
+        incluye: ['Materiales completos', 'Taller hands-on', 'Pieza textil propia', 'Refrigerio tradicional', 'Certificado de participación'],
+        comunidad: 'Cooperativa de Mujeres Tejedoras de Teotitlán del Valle',
+        telefono: '+52 951 524 4321',
+        email: 'textiles@teotitlan.org'
+      },
+      {
+        id: 3,
+        nombre: 'Senderismo en la Selva Lacandona',
+        estado: 'chiapas',
+        tipo: 'aventura',
+        lat: 16.7469,
+        lng: -91.1326,
+        descripcion: 'Explora la selva más biodiversa de México con guías mayas lacandonos.',
+        descripcionCompleta: 'Adéntrate en la Selva Lacandona, hogar de jaguares, quetzales y más de 3,000 especies de plantas. Los guías mayas lacandonos te mostrarán técnicas ancestrales de medicina tradicional, te llevarán a cascadas ocultas y compartirán la cosmovisión maya sobre la naturaleza.',
+        precio: '$1,500 MXN',
+        duracion: '8 horas',
+        incluye: ['Guía maya especializado', 'Transporte interno', 'Comida tradicional lacandona', 'Equipo de senderismo', 'Visita a cascadas'],
+        comunidad: 'Comunidad Maya Lacandona Frontera Corozal',
+        telefono: '+52 961 612 3456',
+        email: 'selva@lacandones.mx'
+      },
+      {
+        id: 4,
+        nombre: 'Cenotes sagrados mayas - Yucatán',
+        estado: 'yucatan',
+        tipo: 'cultura',
+        lat: 20.7167,
+        lng: -89.0944,
+        descripcion: 'Descubre cenotes sagrados con ceremonias y leyendas mayas ancestrales.',
+        descripcionCompleta: 'Explora cenotes considerados sagrados por los antiguos mayas, donde se realizaban ceremonias y ofrendas al dios Chaac. Incluye purificación tradicional maya, nado en aguas cristalinas y narración de leyendas por parte de guardianes mayas contemporáneos.',
+        precio: '$950 MXN',
+        duracion: '5 horas',
+        incluye: ['Acceso a cenotes privados', 'Ceremonia maya de purificación', 'Guía maya certificado', 'Comida yucateca', 'Transporte'],
+        comunidad: 'Guardianes Mayas de los Cenotes Sagrados',
+        telefono: '+52 999 887 6543',
+        email: 'cenotes@mayasagrado.mx'
+      },
+      {
+        id: 5,
+        nombre: 'Cocina tradicional veracruzana',
+        estado: 'veracruz',
+        tipo: 'gastronomia',
+        lat: 19.5341,
+        lng: -96.9104,
+        descripcion: 'Aprende a cocinar mole de Xico y otros platillos con familias locales.',
+        descripcionCompleta: 'Vive una experiencia gastronómica auténtica aprendiendo a preparar el famoso mole de Xico, considerado Patrimonio Cultural Intangible. Las abuelas del pueblo te enseñarán técnicas transmitidas por generaciones, desde el molido de especias hasta la cocción en comales de barro.',
+        precio: '$700 MXN',
+        duracion: '6 horas',
+        incluye: ['Clase de cocina completa', 'Ingredientes locales', 'Comida preparada', 'Recetario tradicional', 'Visita al mercado local'],
+        comunidad: 'Cocineras Tradicionales de Xico',
+        telefono: '+52 228 313 7890',
+        email: 'cocina@xicotradicional.com'
+      },
+      {
+        id: 6,
+        nombre: 'Apicultura maya - Quintana Roo',
+        estado: 'quintana-roo',
+        tipo: 'ecoturismo',
+        lat: 20.2092,
+        lng: -87.4628,
+        descripcion: 'Conoce las técnicas ancestrales de apicultura maya y degusta miel melipon.',
+        descripcionCompleta: 'Descubre los secretos de la apicultura maya con la abeja melipon (Melipona beecheii), considerada sagrada por los antiguos mayas. Aprenderás sobre su importancia cultural, visitarás colmenas tradicionales y degustarás diferentes tipos de miel con propiedades medicinales.',
+        precio: '$650 MXN',
+        duracion: '4 horas',
+        incluye: ['Visita a apiario maya', 'Degustación de mieles', 'Taller de productos apícolas', 'Guía maya especializado', 'Miel para llevar'],
+        comunidad: 'Apicultores Mayas de Felipe Carrillo Puerto',
+        telefono: '+52 983 267 1234',
+        email: 'miel@mayasmelipon.mx'
+      }
+    ];
+
+    // Inicialización cuando carga la página
+    document.addEventListener('DOMContentLoaded', function() {
+      // Manejar video de introducción
+      const introVideo = document.getElementById('intro-video');
+      const video = introVideo.querySelector('video');
+      const skipBtn = document.getElementById('intro-skip');
+
+      // Función para ocultar el video
+      function hideIntroVideo() {
+        anime({
+          targets: introVideo,
+          opacity: 0,
+          duration: 500,
+          easing: 'easeOutQuad',
+          complete: function() {
+            introVideo.style.display = 'none';
+            inicializarMapa();
+          }
+        });
+      }
+
+      // Event listeners para el video
+      if (video) {
+        video.addEventListener('ended', hideIntroVideo);
+        video.addEventListener('error', function() {
+          console.log('Error cargando video, iniciando directamente');
+          hideIntroVideo();
+        });
+      }
+
+      skipBtn.addEventListener('click', hideIntroVideo);
+
+      // Si no hay video, inicializar directamente después de 3 segundos
+      setTimeout(function() {
+        if (introVideo.style.display !== 'none') {
+          hideIntroVideo();
+        }
+      }, 3000);
+
+      // Manejar menú hamburger
+      const hamburger = document.getElementById('hamburger');
+      const navMenu = document.querySelector('.nav-menu');
+
+      hamburger.addEventListener('click', function() {
+        navMenu.classList.toggle('active');
+      });
+
+      // Cerrar menú al hacer clic en un enlace
+      navMenu.addEventListener('click', function(e) {
+        if (e.target.tagName === 'A') {
+          navMenu.classList.remove('active');
+        }
+      });
+    });
+
+    // Inicializar mapa
+    function inicializarMapa() {
+      // Crear el mapa principal
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        center: [-102.0, 23.5], // Centro de México
+        zoom: 5,
+        projection: 'globe'
+      });
+
+      // Cuando el mapa carga
+      map.on('load', function() {
+        // Agregar controles
+        map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+
+        // Agregar marcadores
+        agregarMarcadores();
+
+        // Animación de entrada
+        anime({
+          targets: '.sidebar, .map-container',
+          translateY: [50, 0],
+          opacity: [0, 1],
+          duration: 800,
+          delay: anime.stagger(200),
+          easing: 'easeOutQuad'
+        });
+      });
+
+      // Ajustar el mapa para mostrar todos los puntos
+      map.on('load', function() {
+        const bounds = new mapboxgl.LngLatBounds();
+        experienciasData.forEach(exp => {
+          bounds.extend([exp.lng, exp.lat]);
+        });
+        map.fitBounds(bounds, { padding: 100 });
+      });
+    }
+
+    // Agregar marcadores al mapa
+    function agregarMarcadores() {
+      experienciasData.forEach(function(exp) {
+        // Crear elemento del marcador
+        const markerElement = document.createElement('div');
+        markerElement.className = 'marker-custom';
+        markerElement.innerHTML = exp.id;
+
+        // Crear marcador
+        const marker = new mapboxgl.Marker(markerElement)
+          .setLngLat([exp.lng, exp.lat])
+          .addTo(map);
+
+        allMarkers.push({ marker: marker, data: exp });
+
+        // Event listener para el marcador
+        markerElement.addEventListener('click', function() {
+          seleccionarExperiencia(exp, marker);
+        });
+
+        // Hover effects
+        markerElement.addEventListener('mouseenter', function() {
+          this.style.transform = 'scale(1.2)';
+        });
+
+        markerElement.addEventListener('mouseleave', function() {
+          if (activeExperience?.id !== exp.id) {
+            this.style.transform = 'scale(1)';
+          }
+        });
+
+        // Crear popup para hover
+        const popup = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          offset: 25
+        }).setHTML(`
+          <h3>${exp.nombre}</h3>
+          <p>${exp.descripcion}</p>
+          <p><strong>${exp.precio}</strong></p>
+        `);
+
+        markerElement.addEventListener('mouseenter', function() {
+          popup.setLngLat([exp.lng, exp.lat]).addTo(map);
+        });
+
+        markerElement.addEventListener('mouseleave', function() {
+          popup.remove();
+        });
+      });
+    }
+
+    // Seleccionar experiencia
+    function seleccionarExperiencia(experiencia, marker) {
+      // Remover animación del marcador anterior
+      if (currentMarker) {
+        currentMarker.getElement().classList.remove('marker-pulse');
+        currentMarker.getElement().style.transform = 'scale(1)';
+      }
+
+      // Activar nuevo marcador
+      currentMarker = marker;
+      activeExperience = experiencia;
+      marker.getElement().classList.add('marker-pulse');
+      marker.getElement().style.transform = 'scale(1.2)';
+
+      // Volar a la ubicación
+      map.flyTo({
+        center: [experiencia.lng, experiencia.lat],
+        zoom: 10,
+        duration: 1500
+      });
+
+      // Mostrar panel de información
+      mostrarInfoPanel(experiencia);
+    }
+
+    // Mostrar panel de información
+    function mostrarInfoPanel(experiencia) {
+      const storyPanel = document.getElementById('story-side');
+      const title = document.getElementById('info-title');
+      const description = document.getElementById('info-description');
+      const content = document.getElementById('info-content');
+      const verMasBtn = document.getElementById('ver-mas-btn');
+
+      title.textContent = experiencia.nombre;
+      description.textContent = experiencia.descripcion;
+      content.innerHTML = `
+        <div style="margin: 1rem 0;">
+          <p><strong>Estado:</strong> ${experiencia.estado.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+          <p><strong>Tipo:</strong> ${experiencia.tipo.charAt(0).toUpperCase() + experiencia.tipo.slice(1)}</p>
+          <p><strong>Precio:</strong> ${experiencia.precio}</p>
+          <p><strong>Duración:</strong> ${experiencia.duracion}</p>
+          <p><strong>Comunidad:</strong> ${experiencia.comunidad}</p>
+        </div>
+      `;
+
+      verMasBtn.style.display = 'block';
+      storyPanel.classList.add('active');
+
+      // Animación de entrada
+      anime({
+        targets: storyPanel,
+        scale: [0.9, 1],
+        opacity: [0.7, 1],
+        duration: 300,
+        easing: 'easeOutQuad'
+      });
+    }
+
+    // Cerrar panel de información
+    function cerrarInfoPanel() {
+      const storyPanel = document.getElementById('story-side');
+      storyPanel.classList.remove('active');
+
+      if (currentMarker) {
+        currentMarker.getElement().classList.remove('marker-pulse');
+        currentMarker.getElement().style.transform = 'scale(1)';
+      }
+
+      currentMarker = null;
+      activeExperience = null;
+    }
+
+    // Abrir modal "Ver más"
+    function abrirModal() {
+      if (!activeExperience) return;
+
+      const modal = document.getElementById('modal-overlay');
+      const title = document.getElementById('modal-title');
+      const body = document.getElementById('modal-body');
+
+      title.textContent = activeExperience.nombre;
+      body.innerHTML = `
+        <div class="modal-info">
+          <p><strong>Descripción completa:</strong></p>
+          <p>${activeExperience.descripcionCompleta}</p>
+
+          <h4>Detalles de la experiencia:</h4>
+          <ul>
+            <li><strong>Precio:</strong> ${activeExperience.precio}</li>
+            <li><strong>Duración:</strong> ${activeExperience.duracion}</li>
+            <li><strong>Comunidad:</strong> ${activeExperience.comunidad}</li>
+            <li><strong>Teléfono:</strong> ${activeExperience.telefono}</li>
+            <li><strong>Email:</strong> ${activeExperience.email}</li>
+          </ul>
+
+          <h4>La experiencia incluye:</h4>
+          <ul>
+            ${activeExperience.incluye.map(item => `<li>${item}</li>`).join('')}
+          </ul>
+
+          <div style="margin-top: 2rem;">
+            <button class="btn" onclick="window.open('mailto:${activeExperience.email}?subject=Reserva: ${activeExperience.nombre}', '_blank')">Reservar ahora</button>
+            <button class="btn btn-secondary" onclick="window.open('tel:${activeExperience.telefono}', '_blank')" style="margin-left: 1rem;">Llamar</button>
+          </div>
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+
+      // Crear mini mapa en el modal
+      setTimeout(function() {
+        if (modalMap) {
+          modalMap.remove();
+        }
+
+        modalMap = new mapboxgl.Map({
+          container: 'modal-map',
+          style: 'mapbox://styles/mapbox/satellite-streets-v12',
+          center: [activeExperience.lng, activeExperience.lat],
+          zoom: 12
+        });
+
+        // Agregar marcador al mini mapa
+        new mapboxgl.Marker()
+          .setLngLat([activeExperience.lng, activeExperience.lat])
+          .addTo(modalMap);
+      }, 100);
+
+      // Animación de entrada del modal
+      anime({
+        targets: modal.querySelector('.modal-content'),
+        scale: [0.7, 1],
+        opacity: [0, 1],
+        duration: 300,
+        easing: 'easeOutQuad'
+      });
+    }
+
+    // Cerrar modal
+    function cerrarModal() {
+      const modal = document.getElementById('modal-overlay');
+
+      anime({
+        targets: modal.querySelector('.modal-content'),
+        scale: [1, 0.7],
+        opacity: [1, 0],
+        duration: 200,
+        easing: 'easeInQuad',
+        complete: function() {
+          modal.style.display = 'none';
+          if (modalMap) {
+            modalMap.remove();
+            modalMap = null;
+          }
+        }
+      });
+    }
+
+    // Aplicar filtros
+    function aplicarFiltros() {
+      const estadoFilter = document.getElementById('estado-filter').value;
+      const tipoFilter = document.getElementById('tipo-filter').value;
+      const searchInput = document.getElementById('search-input').value.toLowerCase();
+
+      let experienciasFiltradas = experienciasData;
+
+      // Filtrar por estado
+      if (estadoFilter) {
+        experienciasFiltradas = experienciasFiltradas.filter(exp => exp.estado === estadoFilter);
+      }
+
+      // Filtrar por tipo
+      if (tipoFilter) {
+        experienciasFiltradas = experienciasFiltradas.filter(exp => exp.tipo === tipoFilter);
+      }
+
+      // Filtrar por búsqueda de texto
+      if (searchInput) {
+        experienciasFiltradas = experienciasFiltradas.filter(exp => 
+          exp.nombre.toLowerCase().includes(searchInput) ||
+          exp.descripcion.toLowerCase().includes(searchInput) ||
+          exp.comunidad.toLowerCase().includes(searchInput)
+        );
+      }
+
+      // Ocultar todos los marcadores
+      allMarkers.forEach(item => {
+        item.marker.remove();
+      });
+
+      // Mostrar solo los marcadores filtrados
+      const bounds = new mapboxgl.LngLatBounds();
+      experienciasFiltradas.forEach(exp => {
+        const markerItem = allMarkers.find(item => item.data.id === exp.id);
+        if (markerItem) {
+          markerItem.marker.addTo(map);
+          bounds.extend([exp.lng, exp.lat]);
+        }
+      });
+
+      // Ajustar vista del mapa
+      if (experienciasFiltradas.length > 0) {
+        map.fitBounds(bounds, { padding: 100 });
+      }
+
+      // Cerrar panel si la experiencia activa no está en los resultados
+      if (activeExperience && !experienciasFiltradas.find(exp => exp.id === activeExperience.id)) {
+        cerrarInfoPanel();
+      }
+    }
+
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('modal-overlay').addEventListener('click', function(e) {
+      if (e.target === this) {
+        cerrarModal();
+      }
+    });
+
+    // Función para resetear filtros
+    function resetearFiltros() {
+      document.getElementById('estado-filter').value = '';
+      document.getElementById('tipo-filter').value = '';
+      document.getElementById('search-input').value = '';
+      aplicarFiltros();
+    }
+  </script>
+</body>
+</html>
